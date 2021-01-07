@@ -144,6 +144,15 @@ then SUDO="sudo -u {{SUDO_USER}}"
 elif [ "$SUDO" ] && [ -n "$SUDO_USER" ]
 then SUDO="sudo "
 fi
+SSH_USER="{{SSH_USER}}"
+SSH_PASSWD="{{SSH_PASSWD}}"
+if [ "$SUDO" ] && [ "$SSH_USER" ] && [ "$SSH_USER" != "root" ] && [ "$SSH_PASSWD" ] && [ -n "$SUDO_USER" ]
+then
+  echo "$SSH_PASSWD\n\n" | install -m 600 /dev/stdin /tmp/pass.txt
+  sudo -S sh -c "echo '$SSH_USER ALL=NOPASSWD: /usr/bin/python, /usr/bin/python2, /usr/bin/python3' > /etc/sudoers.d/01-salt" < /tmp/pass.txt
+  sudo -S sh -c "chmod 0440 /etc/sudoers.d/01-salt" < /tmp/pass.txt
+  rm -f /tmp/pass.txt
+fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
@@ -1272,6 +1281,8 @@ class Single:
         """
         sudo = "sudo" if self.target["sudo"] else ""
         sudo_user = self.target["sudo_user"]
+        ssh_user = self.target["user"]
+        ssh_passwd = self.target["passwd"]
         if "_caller_cachedir" in self.opts:
             cachedir = self.opts["_caller_cachedir"]
         else:
@@ -1321,6 +1332,8 @@ ARGS = {arguments}\n'''.format(
                 DEBUG=debug,
                 SUDO=sudo,
                 SUDO_USER=sudo_user,
+                SSH_USER=ssh_user,
+                SSH_PASSWD=ssh_passwd,
                 SSH_PY_CODE=py_code_enc,
                 HOST_PY_MAJOR=sys.version_info[0],
                 SET_PATH=self.set_path,
